@@ -1,0 +1,137 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "airtableTokenApi",
+        "baseId": {
+          "__rl": true,
+          "value": "app3LGK8eG1DHkOuz",
+          "mode": "id"
+        },
+        "tableId": {
+          "__rl": true,
+          "value": "tblNBwSzWhgvp4143",
+          "mode": "id"
+        },
+        "triggerField": "Updated at",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.airtableTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2144,
+        416
+      ],
+      "id": "12a171b4-ba55-4f47-952f-a8cd974ca5a1",
+      "name": "Lead Status Change Trigger",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "TZnNElpJH9BqxliL",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f56baf76-7956-432a-8809-6ce109939710",
+              "leftValue": "={{ $json.fields.Status }}",
+              "rightValue": "New Lead",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "manual_update_check",
+              "leftValue": "={{ new Date($json.fields['Updated at']).getTime() > (new Date($json.fields['Created at']).getTime() + 1000) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1936,
+        416
+      ],
+      "id": "42d806bf-295c-472c-8180-7e527e5a175b",
+      "name": "Status Changed to New Lead"
+    },
+    {
+      "parameters": {
+        "sendTo": "customer@mailid.com",
+        "subject": "=Here is your New Lead For {{ $('Lead Status Change Trigger').item.json.fields['Customer Name'] }}",
+        "emailType": "text",
+        "message": "=🔥 NEW VERIFIED LEAD CAPTURED\nSystem: Gushwork Lead Orchestrator\n\nHello Team,\n\nA new high-quality lead has been captured. Here are the details:\n\n👤 Name: {{ $('Lead Status Change Trigger').item.json.fields.Name }}\n{{ $('Lead Status Change Trigger').item.json.fields['Email Address'] ? \"📧 Email: \" + $('Lead Status Change Trigger').item.json.fields['Email Address'] : \"\" }}\n{{ $('Lead Status Change Trigger').item.json.fields['Phone Number'] ? \"📞 Phone: \" + $('Lead Status Change Trigger').item.json.fields['Phone Number'] : \"\" }}\n\n{{ $('Lead Status Change Trigger').item.json.fields['Lead Details'] ? \"📝 Message:\\n\" + $('Lead Status Change Trigger').item.json.fields['Lead Details'] : \"\" }}\n\n---\n{{ $('Lead Status Change Trigger').item.json.fields['Email Address'] ? \"Reply to Lead: mailto:\" + $('Lead Status Change Trigger').item.json.fields['Email Address'] : \"No email provided.\" }}\n\n© 2026 Gushwork Automation Labs",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1648,
+        416
+      ],
+      "id": "330a2267-b4ca-43b6-bd95-183c7509a468",
+      "name": "Spam Lead to New Lead Mail",
+      "webhookId": "109b7332-3b1e-4031-a2b5-77fc52259428",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mxpVFxmKKU1SWNKD",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Lead Status Change Trigger": {
+      "main": [
+        [
+          {
+            "node": "Status Changed to New Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Status Changed to New Lead": {
+      "main": [
+        [
+          {
+            "node": "Spam Lead to New Lead Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e239d2466763f7178c6bf628e1be584deb4d4308e7fee3b6b8db61c071444914"
+  }
+}

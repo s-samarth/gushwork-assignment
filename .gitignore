@@ -1,0 +1,68 @@
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.launch
+.factorypath
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.stylelintcache
+.prettiercache
+
+# Environment variables & Secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+
+# Build & Temporary files
+dist/
+build/
+out/
+.tmp/
+.temp/
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Gushwork specific
+# (Optional: Ignore local workflow exports if they contain secrets, 
+# but usually JSONs in workflows/ are meant to be committed as templates)
+# .gemini/ is usually ignored by the system, but good to have here if manual
+.gemini/

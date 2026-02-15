@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gushwork Enterprise | Intelligence Testbed</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="../scripts/lead-capture.js" defer></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <span class="glow-pill">Enterprise Intelligence</span>
+            <h1>Lead Generation Testbed</h1>
+            <p style="color: #64748b;">Testing session endurance, multi-phase capture, and nested encapsulation.</p>
+        </header>
+
+        <div class="grid">
+            <!-- Scenario 1: Classic Basic Form -->
+            <div class="card">
+                <h2>Classic Basic Form</h2>
+                <p class="desc">A straightforward, single-step form for standard lead capture.</p>
+                <form id="basic-form">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" name="Name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="Email" placeholder="john@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" name="Phone" placeholder="+1 (555) 123-4567">
+                    </div>
+                    <div class="form-group">
+                        <label>Requirement</label>
+                        <textarea name="lead_details" placeholder="Briefly describe your needs..." rows="3"
+                            style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.9rem; color: white; margin-bottom: 1rem; font-family: inherit; resize: vertical;"></textarea>
+                    </div>
+                    <button type="submit">Send Basic Lead</button>
+                </form>
+            </div>
+
+            <!-- Scenario 2: Deep Encapsulation -->
+            <div class="card">
+                <h2>Deep Shadow DOM</h2>
+                <p class="desc">Burying inputs within nested Shadow Roots. Most scripts fail here; ours pierces it
+                    recursively.</p>
+                <div id="deep-shadow-host"></div>
+            </div>
+
+            <!-- Scenario 3: Multi-Step Lead Flow -->
+            <div class="card" id="multi-step-card">
+                <h2>Multi-Step: Contact Details</h2>
+                <p class="desc">Simulating high-intent B2B flows where data is gathered across phases.</p>
+                <div class="multi-step-header">
+                    <div class="step-indicator active"></div>
+                    <div class="step-indicator" id="step2-indicator"></div>
+                </div>
+
+                <form id="multi-step-form">
+                    <div id="step-1-content">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" name="fullName" placeholder="Alexander Wright" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Business Email</label>
+                            <input type="email" name="email" placeholder="alex@spacex.com" required>
+                        </div>
+                        <button type="button" onclick="nextStep()">Continue to Step 2</button>
+                    </div>
+
+                    <div id="step-2-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Company Size</label>
+                            <input type="text" name="company_size" placeholder="500-1000 employees">
+                        </div>
+                        <div class="form-group">
+                            <label>Budget Range</label>
+                            <input type="text" name="budget_est" placeholder="$50k - $100k">
+                        </div>
+                        <div class="form-group">
+                            <label>Message / Lead Details</label>
+                            <textarea name="message" placeholder="Describe your industrial requirements..." rows="3"
+                                style="width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--border); border-radius: 0.75rem; padding: 0.9rem; color: white; margin-bottom: 1rem; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button type="button"
+                                style="background: transparent; border: 1px solid var(--border); flex: 1;"
+                                onclick="prevStep()">Back</button>
+                            <button type="submit" style="flex: 2;">Finish & Request Quote</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function nextStep() {
+            document.getElementById('step-1-content').style.display = 'none';
+            document.getElementById('step-2-content').style.display = 'block';
+            document.getElementById('step2-indicator').classList.add('active');
+        }
+
+        function prevStep() {
+            document.getElementById('step-1-content').style.display = 'block';
+            document.getElementById('step-2-content').style.display = 'none';
+            document.getElementById('step2-indicator').classList.remove('active');
+        }
+
+        // Nested Shadow DOM Construction
+        const host1 = document.getElementById('deep-shadow-host');
+        const root1 = host1.attachShadow({ mode: 'open' });
+
+        const host2 = document.createElement('div');
+        host2.style.padding = '10px';
+        host2.style.border = '1px dashed rgba(255,255,255,0.1)';
+        const root2 = host2.attachShadow({ mode: 'open' });
+
+        const formInner = document.createElement('form');
+        formInner.id = "nested-shadow-form";
+        formInner.innerHTML = `
+            <style>
+                input, textarea { width: 100%; background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 0.9rem; color: white; margin-bottom: 1rem; font-family: sans-serif; resize: vertical; }
+                button { width: 100%; background: #06b6d4; color: white; border: none; border-radius: 0.75rem; padding: 1rem; cursor: pointer; font-weight: 600; }
+                label { display: block; margin-bottom: 0.5rem; color: #94a3b8; font-size: 0.875rem; }
+            </style>
+            <label>Full Name</label>
+            <input type="text" name="nested_user" placeholder="Shadow User">
+            <label>Email</label>
+            <input type="email" name="nested_email" placeholder="shadow@nested.com">
+            <label>Requirements</label>
+            <textarea name="message" placeholder="A message hidden in shadows..." rows="2"></textarea>
+            <button type="submit">Submit Deep Form</button>
+        `;
+
+        root2.appendChild(formInner);
+        root1.appendChild(host2);
+
+        // Success Feedback & Prevent Page Reload (Production-Grade Pattern)
+        const handleSubmission = (e) => {
+            e.preventDefault();
+            const form = e.target;
+            console.log('Form submission intercepted:', form.id);
+
+            // Visual feedback: Hide form and show success state
+            form.innerHTML = `
+                <div style="text-align: center; padding: 2rem; animation: pulse 2s infinite;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🚀</div>
+                    <h3 style="color: var(--primary);">Success!</h3>
+                    <p style="color: var(--text-dim); font-size: 0.9rem;">Lead data dispatched to N8N and stored in Sheets.</p>
+                </div>
+            `;
+        };
+
+        // Attach to main forms
+        document.querySelectorAll('form').forEach(f => f.addEventListener('submit', handleSubmission));
+
+        // Attach to shadow forms (once they are rendered)
+        setTimeout(() => {
+            if (root2.querySelector('form')) {
+                root2.querySelector('form').addEventListener('submit', handleSubmission);
+            }
+        }, 100);
+    </script>
+</body>
+
+</html>

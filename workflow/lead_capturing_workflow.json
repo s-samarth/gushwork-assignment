@@ -1,0 +1,646 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsonSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"Name\": { \"type\": [\"string\", \"null\"] },\n    \"Phone\": { \"type\": [\"string\", \"null\"] },\n    \"Email\": { \"type\": [\"string\", \"null\"] },\n    \"Message\": { \"type\": [\"string\", \"null\"] }\n  }\n}"
+      },
+      "id": "7f716335-47a9-4126-8097-a780170d77e0",
+      "name": "Structured Output Parser1",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1,
+      "position": [
+        -1664,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const mapped = $json || {};\nconst message = (mapped.Message || \"\");\nconst messageLower = message.toLowerCase();\nconst email = (mapped.Email || \"\").toLowerCase();\nconst name = (mapped.Name || \"\").toLowerCase();\n\nlet flags = [];\nlet status = \"New Lead\";\nlet needs_ai_analysis = true;\n\n// 1. BEHAVIORAL: Excessive Capitalization (SHOUTING)\nconst capsCount = (message.match(/[A-Z]/g) || []).length;\nif (message.length > 20 && capsCount / message.length > 0.4) {\n    flags.push(\"Excessive Shouting\");\n}\n\n// 2. STRUCTURAL: Gibberish/Random String Detection\n// Flags strings of 15+ characters with no vowels (typical of random bot generators)\nif (/[bcdfghjklmnpqrstvwxyz]{15,}/i.test(message)) {\n    flags.push(\"Gibberish Detected\");\n}\n\n// 3. LOGICAL: \"Same Name\" bot pattern\n// Many bots fill 'First Name' and 'Last Name' with the same random word\nconst nameParts = name.split(' ').filter(p => p.length > 0);\nif (nameParts.length >= 2 && nameParts[0] === nameParts[1]) {\n    flags.push(\"Suspicious Name Pattern\");\n}\n\n// 4. CONTENT: Advanced URL Analysis\nconst urlPattern = /(https?:\\/\\/|www\\.)\\S+/g;\nconst urlsFound = message.match(urlPattern) || [];\nif (urlsFound.length >= 2) {\n    flags.push(`Multiple Links (${urlsFound.length})`);\n}\n// Specific check for TLDs often used for spam\nif (urlsFound.some(u => u.match(/\\.(ru|xyz|top|info|click|biz|zip)$/))) {\n    flags.push(\"Suspicious TLD\");\n}\n\n// 5. KEYWORD: Semantic Groups (Expanded)\nconst financeSpam = [\"crypto\", \"bitcoin\", \"forex\", \"trading\", \"investment\"];\nconst marketingSpam = [\"seo services\", \"backlinks\", \"guest post\", \"traffic\", \"google ranking\"];\nconst urgentSpam = [\"urgent\", \"don't miss\", \"winner\", \"congratulations\", \"prize\"];\n\nconst allKeywords = [...financeSpam, ...marketingSpam, ...urgentSpam];\nif (allKeywords.some(kw => messageLower.includes(kw))) {\n    flags.push(\"Blacklisted Content\");\n}\n\n// 6. TECHNICAL: Burner Email Check (Improved regex)\nconst suspiciousDomains = [\"mailinator.com\", \"guerrillamail.com\", \"temp-mail.org\", \"10minutemail\"];\nif (suspiciousDomains.some(domain => email.includes(domain))) {\n    flags.push(\"Burner Email\");\n}\n\n// 7. MULTI-FACTOR SCORING (The \"Sophistication\" Secret)\n// Instead of just one flag, we can trigger 'Possible Spam' if 2+ minor issues are found\nif (flags.length >= 2 || flags.includes(\"Gibberish Detected\") || flags.includes(\"Blacklisted Content\")) {\n    status = \"Possible Spam\";\n    needs_ai_analysis = false;\n}\n\nreturn {\n    ...$json,\n    Status: status,\n    Spam_Flags: flags.length > 0 ? flags.join(\", \") : \"None\",\n    needs_ai_analysis: needs_ai_analysis,\n    Spam_Count: flags.length\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1488,
+        -112
+      ],
+      "id": "76b73044-1279-45f4-9f50-ff98e9ffce1b",
+      "name": "Regex and Keyword Spam Filter"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"is_spam\": {\n\t\t\t\"type\": \"boolean\"\n\t\t},\n\t\t\"reason\": {\n\t\t\t\"type\": \"string\"\n\t\t}\n\t}\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        -256
+      ],
+      "id": "54994708-6e9e-4933-8318-6b5296e7f5ac",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=# ROLE\nYou are a Lead Quality Assurance Expert at Gushwork. Your job is to filter incoming website inquiries for our clients (Industrial Manufacturers and Local Service Businesses). Your goal is to ensure only potential *buyers* reach the sales team, blocking vendors, solicitors, and bots.\n\nHere are the details of the message:\nName: {{ $('Regex and Keyword Spam Filter').item.json.Name }}\nPhone: {{ $('Regex and Keyword Spam Filter').item.json.Phone }}\nEmail: {{ $('Regex and Keyword Spam Filter').item.json.Email }}\nMessage: {{ $('Regex and Keyword Spam Filter').item.json.Message }}\n\n# CLASSIFICATION GUIDELINES\n\n## MARK AS SPAM (is_spam: true) if the message is:\n1. **B2B Solicitation:** Someone trying to *sell* services (SEO, Web Design, Staffing, Raw Materials, Lead Lists) rather than *buy* them.\n2. **Scam/Phishing:** Mentions of \"Domain Expiration,\" \"Urgent Invoice,\" \"Crypto,\" or \"Inheritance.\"\n3. **Irrelevant:** Job applications, student research surveys, or \"wrong number\" type messages.\n4. **Incoherent/Low Effort:** Gibberish strings, or single-word messages like \"Hi\" or \"Test\" with no follow-up intent.\n\n## MARK AS LEGITIMATE (is_spam: false) if the message is:\n1. **Service/Product Inquiry:** Asking about pricing, availability, specs, or quotes.\n2. **General Contact:** \"Can someone call me?\" or \"Where are you located?\"\n3. **Imperfect English:** Do not penalize poor grammar if the *intent to buy* is clear.\n\nYou must respond strictly according to the provided schema. Do not include any conversational text or markdown formatting outside the JSON.\"\n\n\"Analyze the message. For the is_spam field, you must only return the JSON boolean true or false. Do not use 'Yes', 'No', or any other string.\"",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -1072,
+        -448
+      ],
+      "id": "4a980f17-f10e-4d9e-8a0a-bf7a99656b3c",
+      "name": "AI Spam Filter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "464b75c4-29ce-40a2-ab17-ece72ca63f98",
+              "name": "Status",
+              "value": "={{ $json.output.is_spam ? 'Possible Spam' : 'New Lead' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -656,
+        -448
+      ],
+      "id": "0d365ce1-ae43-497c-bb5f-c047789b4ba4",
+      "name": "AI Spam Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bce6ce5e-a769-4e54-ba6b-f9596a2f1568",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "New Lead",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        -96
+      ],
+      "id": "09f8867e-9ea0-463d-a3e8-2224716b1fe4",
+      "name": "Mail Urgency Router"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b8fc550b-a444-47e4-aa31-e430c7be2af1",
+              "leftValue": "={{ $json.needs_ai_analysis }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1264,
+        -112
+      ],
+      "id": "eaff3300-1fb7-426b-92bc-8f91da784cd1",
+      "name": "Needs AI Analysis Router"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "capture-lead",
+        "authentication": "headerAuth",
+        "options": {
+          "allowedOrigins": "*",
+          "responseData": "Captured"
+        }
+      },
+      "id": "37a60bd6-72e0-4aa9-ac89-8a7aa906de95",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2224,
+        -112
+      ],
+      "webhookId": "8b9aca1a-f4cc-4ac2-a161-1759a315143a",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YISKnUDJxVMe9MC1",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.data._gw_bot_trap }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "04461ff0-b160-44cf-b03b-c532e653855b",
+      "name": "Honeypot Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -2032,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract and normalize lead information from the following submission data:\n\n### DATA:\n{{ JSON.stringify($json.body.normalized) }}\n\n### INSTRUCTIONS:\n1. Identify and extract: Name, Email, Phone, and Message. Message contains all the details of the lead which will be helpful to the business.\n2. Use all parts of the data (including raw, normalized, or metadata fields) to find the most accurate values.\n3. If a field is missing, return null.\n4. Clean and normalize the values (e.g., proper capitalization for names).\n5. Do NOT hallucinate data; only use what is provided above.",
+        "hasOutputParser": true
+      },
+      "id": "911153f7-b21a-47f0-bdc1-93f805145b37",
+      "name": "AI Smart Mapper",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [
+        -1776,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        -256
+      ],
+      "id": "9e7d6509-07b2-4d85-826b-9de93a56f6e1",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7s9eZ5Tj3qY4IjZV",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "ee250530-cbf6-4971-bd66-2146e76e1fa1",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1824,
+        96
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7s9eZ5Tj3qY4IjZV",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "customer@mailid.com",
+        "subject": "=Here is your New Lead For {{ $('Webhook').item.json.body.meta.customerName }}",
+        "emailType": "text",
+        "message": "=🔥 NEW VERIFIED LEAD CAPTURED\nSystem: Gushwork Lead Orchestrator\n\nHello Team,\n\nA new high-quality lead has been captured. Here are the details:\n\n👤 Name: {{ $('AI Smart Mapper').item.json.Name }}\n{{ $('AI Smart Mapper').item.json.Email ? \"📧 Email: \" + $('AI Smart Mapper').item.json.Email : \"\" }}\n{{ $('AI Smart Mapper').item.json.Phone ? \"📞 Phone: \" + $('AI Smart Mapper').item.json.Phone : \"\" }}\n\n{{ $('AI Smart Mapper').item.json.Message ? \"📝 Message:\\n\" + $('AI Smart Mapper').item.json.Message : \"\" }}\n\n---\n{{ $('AI Smart Mapper').item.json.Email ? \"Reply to Lead: mailto:\" + $('AI Smart Mapper').item.json.Email : \"No email provided.\" }}\n\n2026 Gushwork Automation Labs",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        32,
+        -256
+      ],
+      "id": "4436b8d7-db00-4972-ad50-5423ed40e876",
+      "name": "Found A New Lead Mail",
+      "webhookId": "109b7332-3b1e-4031-a2b5-77fc52259428",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "mxpVFxmKKU1SWNKD",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "app3LGK8eG1DHkOuz",
+          "mode": "list",
+          "cachedResultName": "Gushwork Leads",
+          "cachedResultUrl": "https://airtable.com/app3LGK8eG1DHkOuz"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblNBwSzWhgvp4143",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://airtable.com/app3LGK8eG1DHkOuz/tblNBwSzWhgvp4143"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('AI Smart Mapper').item.json.Name }}",
+            "Phone Number": "={{ $('AI Smart Mapper').item.json.Phone }}",
+            "Email Address": "={{ $('AI Smart Mapper').item.json.Email }}",
+            "Lead Details": "={{ $('AI Smart Mapper').item.json.Message }}",
+            "Submission URL": "={{ $('Webhook').item.json.body.meta.sourceUrl }}",
+            "Lead Source": "={{ $('Webhook').item.json.body.meta.referrer }}",
+            "Status": "={{ $('Mail Urgency Router').item.json.Status }}",
+            "Customer Name": "={{ $('Webhook').item.json.body.meta.customerName }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lead Details",
+              "displayName": "Lead Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Submission URL",
+              "displayName": "Submission URL",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lead Source",
+              "displayName": "Lead Source",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Created at",
+              "displayName": "Created at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Updated at",
+              "displayName": "Updated at",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        288,
+        -96
+      ],
+      "id": "1b550438-d350-41df-819b-a38c4d430169",
+      "name": "Add Lead to Database",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "TZnNElpJH9BqxliL",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "464b75c4-29ce-40a2-ab17-ece72ca63f98",
+              "name": "Status",
+              "value": "={{ $json.Status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -848,
+        -96
+      ],
+      "id": "268f94fd-5053-403c-9a52-a84dfb551a01",
+      "name": "Heuristic Spam Result"
+    }
+  ],
+  "connections": {
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Smart Mapper",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Regex and Keyword Spam Filter": {
+      "main": [
+        [
+          {
+            "node": "Needs AI Analysis Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Spam Filter",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Spam Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Spam Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Spam Result": {
+      "main": [
+        [
+          {
+            "node": "Mail Urgency Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mail Urgency Router": {
+      "main": [
+        [
+          {
+            "node": "Found A New Lead Mail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add Lead to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs AI Analysis Router": {
+      "main": [
+        [
+          {
+            "node": "AI Spam Filter",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Heuristic Spam Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Honeypot Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Honeypot Check": {
+      "main": [
+        [
+          {
+            "node": "AI Smart Mapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Smart Mapper": {
+      "main": [
+        [
+          {
+            "node": "Regex and Keyword Spam Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Spam Filter",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Smart Mapper",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found A New Lead Mail": {
+      "main": [
+        [
+          {
+            "node": "Add Lead to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Lead to Database": {
+      "main": [
+        []
+      ]
+    },
+    "Heuristic Spam Result": {
+      "main": [
+        [
+          {
+            "node": "Mail Urgency Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e239d2466763f7178c6bf628e1be584deb4d4308e7fee3b6b8db61c071444914"
+  }
+}
