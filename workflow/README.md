@@ -31,7 +31,7 @@ This workflow is the entry point for all website submissions. It uses a tiered a
     *   **Output**: A clean JSON object regardless of the input structure.
 
 #### 3. Spam Defense Matrix (Hybrid Strategy)
-This two-step process reduces LLM costs by ~60% by catching obvious spam first.
+This two-step process reduces LLM costs by catching obvious spam first.
 
 *   **Layer 1: Heuristic Spam Filter (Code Node)**:
     *   Run fast, deterministic checks using RegEx and logic:

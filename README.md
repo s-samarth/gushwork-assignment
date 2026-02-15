@@ -95,6 +95,26 @@ The system requires an Airtable Base with the following specific fields:
 
 ---
 
+## 📚 Documentation Library
+
+We maintain comprehensive documentation for every layer of the system:
+### 🛠️ Technical Implementation
+| Document | Description |
+| :--- | :--- |
+| **[Universal Script Guide](/scripts/README.md)** | Deep dive into `lead-capture.js` logic, installation (GTM/Manual), and configuration. |
+| **[N8N Workflow Architecture](/workflow/README.md)** | Explanation of the logic behind the Capture and Monitoring workflows. |
+| **[Mock Site Usage](/mock-site/README.md)** | How to run the local testbed and validate Shadow DOM scenarios. |
+
+### 🧠 Strategy & Security
+| Document | Description |
+| :--- | :--- |
+| **[Rollout & Roadmap](/docs/Rollout_Edge_Cases_and_Future_Plan.md)** | Deployment strategies for 3 customer archetypes and the 2-week technical roadmap. |
+| **[Spam Defense Matrix](/docs/spam_filtering.md)** | Detailed breakdown of the Heuristic (Regex) and AI (LLM) spam layers + System Prompts. |
+| **[Additional Architecture](/docs/additional_notes.md)** | Specs on payload schema, tech stack comparisons (n8n vs Zapier), and advanced security. |
+| **[Database Decision](/docs/airtable_vs_sheets.md)** | A comparative analysis of why we chose Airtable over Google Sheets. |
+
+---
+
 ## 🚀 Getting Started
 
 1.  **Deploy the Script**: Host the `/scripts/lead-capture.js` file on your CDN.
